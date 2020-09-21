@@ -35,6 +35,7 @@ module.exports = class {
     //Перезапустить бота
     restart(id)
     {
+
         this.bots.forEach((v, i) => {
             if (v.id() == id)
             {

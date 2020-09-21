@@ -123,4 +123,12 @@ module.exports = class {
 
 		return fetch(url, requestOptions).then(res => res.json());
     }
+
+    destroy()
+    {
+        if (this.#_is_connected)
+        {
+            this.#_websocket.close();
+        }
+    }
 };

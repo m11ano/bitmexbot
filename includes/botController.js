@@ -12,41 +12,90 @@ module.exports = class {
     #_data_transmitter = null;
     #_trades_controller = null;
     #_trades_controller_is_init = false;
+    #_is_init = false;
 
     constructor(options)
     {
         this.#_id = options.id;
         this.#_options = options;
+
         this.#_data_transmitter = new bitmexDataTransmitterModel(this.#_options);
 
-        this.#_data_transmitter.on('message', (data) =>
+        this.init();
+    }
+
+    async init()
+    {
+        if (this.#_is_init == false)
         {
-            if (typeof data != 'undefined')
+            this.#_is_init = true;
+
+            if (this.#_options.session_init == 0)
             {
-                this.#engineWSMessage(data);
+                await new Promise((resolve, reject) =>
+                {
+                    //resolve();
+                    //Первичная инициализация бота после создания новой сессии
+
+                    this.#_data_transmitter.request('order/all', 'DELETE', {})
+                    .then((result) =>
+                    {
+                        this.#_data_transmitter.request('order/closePosition', 'POST', {
+                            symbol: 'XBTUSD'
+                        })
+                        .then((result) => {
+                            global.db.mysql().query(`UPDATE bots_profiles set session_init = 1 WHERE id = ?`, [this.#_id], (error, results, fields) => {
+                                if (!error)
+                                {
+                                    console.log(`У бота #${this.#_id} удалены все позиции`);
+                                    resolve();
+                                }
+                            });
+                        });
+                    });
+                });
             }
-        });
 
-        this.#_data_transmitter.on('close', () =>
-        {
-            setTimeout(() => {
-                global.botsController.restart(this.#_id);
-            }, 1000);
-        });
+            if (this.#_options.status == 0)
+            {
+                console.log(`Бот #${this.#_id} создан, но он отключен`);
+            }
+            else
+            {
+                console.log(`Бот #${this.#_id} создан`);
 
-        this.#_data_transmitter.connect()
-        .then(() =>
-        {
-            console.log('Бот #${this.#_id} создан и подключен');
-            this.updatePingTime();
-            this.#_trades_controller = new botTradesControllerModel(this);
-            this.#_trades_controller_is_init = true;
-        })
-        .catch((e) =>
-        {
-            console.log('Error: ошибка при работе бота #${this.#_id} с WS', e);
-        });
+                this.#_data_transmitter.on('message', (data) =>
+                {
+                    if (typeof data != 'undefined')
+                    {
+                        this.#engineWSMessage(data);
+                    }
+                });
 
+                this.#_data_transmitter.on('close', () =>
+                {
+                    setTimeout(() => {
+                        if (this.#_options.status == 1)
+                        {
+                            global.botsController.restart(this.#_id);
+                        }
+                    }, 1000);
+                });
+
+                this.#_data_transmitter.connect()
+                .then(() =>
+                {
+                    console.log(`Бот #${this.#_id} подключен к сети, сессия #${this.#_options.session_id}`);
+                    this.updatePingTime();
+                    this.#_trades_controller = new botTradesControllerModel(this);
+                    this.#_trades_controller_is_init = true;
+                })
+                .catch((e) =>
+                {
+                    console.log(`Error: ошибка при подключении бота #${this.#_id} к WS`, e);
+                });
+            }
+        }
     }
 
     id()
@@ -67,7 +116,7 @@ module.exports = class {
     //Обработка сообщения от WS
     #engineWSMessage = function(message)
     {
-        if (this.#_trades_controller_is_init)
+        if (this.#_trades_controller_is_init && this.#_options.status == 1)
         {
             this.#_trades_controller.newMessage(message);
         }
@@ -76,7 +125,7 @@ module.exports = class {
     //Пингануть WS
     ping()
     {
-        if (this.#_data_transmitter.isConnected())
+        if (this.#_options !== null && this.#_options.status == 1 && this.#_data_transmitter.isConnected())
         {
             this.#_data_transmitter.websocket().ping();
             this.updatePingTime();
@@ -91,6 +140,17 @@ module.exports = class {
 
     destroy()
     {
-        console.log('Бот #${this.#_id} разрушен');
+        this.#_options.status = 0;
+        if (this.#_data_transmitter !== null)
+        {
+            this.#_data_transmitter.destroy();
+        }
+
+        if (this.#_trades_controller !== null)
+        {
+            this.#_trades_controller.destroy();
+        }
+
+        console.log(`Бот #${this.#_id}, сессия #${this.#_options.session_id}, разрушен`);
     }
 };

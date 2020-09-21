@@ -1,0 +1,105 @@
+html, body {
+  height:100%;
+  width:100%;
+  margin:0;
+  padding:0;
+}
+
+body {
+  min-width:320px;
+  min-height:100%;
+  font-size:14px;
+  font-family:Arial, Tahoma, sans-serif;
+  background:#fff;
+  color:#000;
+}
+
+body {
+  text-size-adjust:none !important;
+  -webkit-text-size-adjust:none !important;
+  -moz-text-size-adjust:none !important;
+  -ms-text-size-adjust:none !important;
+}
+
+html * {max-height:1000000px;}
+
+body div, body a, body li, body span, body label {max-height:1000000px;}
+
+img {
+  border:none;
+}
+
+a {
+  color:#000;
+  text-decoration:underline;
+}
+
+a:hover {
+  text-decoration:none;
+}
+
+.clearboth {
+  display:block;
+  clear:both;
+  height:0px;
+  font-size:0px;
+  overflow:hidden;
+}
+
+#wrapper {
+  padding:20px;
+}
+
+#settings {
+  max-width:800px;
+}
+
+#settings > div {
+  display:flex;
+  justify-content: space-between;
+  padding:10px;
+  background: #f5f5f5;
+}
+
+#settings > div:nth-child(even) {
+  background:#eee;
+}
+
+#settings > div > div {
+  flex-basis:calc(50% - 10px);
+}
+
+#settings > div > .value input[type=text] {
+  display:block;
+  width:100%;
+  box-sizing:border-box;
+  padding:3px 6px;
+  font-size:16px;
+}
+
+#settings_save {
+  padding-top:20px;
+  max-width:800px;
+  text-align:center;
+}
+
+#settings_save > div { 
+  padding-top:20px;
+}
+
+#settings_save a {
+  display:inline-block;
+  box-sizing: border-box;
+  padding:20px 30px;
+  color:#fff;
+  font-size:18px;
+  text-decoration: none;
+}
+
+#settings_save a.save {
+  background:red;
+}
+
+#settings_save a.stop {
+  background:#555;
+}

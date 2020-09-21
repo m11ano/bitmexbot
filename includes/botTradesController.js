@@ -6,6 +6,7 @@ const botTradeControllerModel = require('./botTradeController.js');
 
 module.exports = class {
 
+    #_is_destoyed = false;
     #_parent = null;
     #_options = null;
     #_data_transmitter = null;
@@ -14,12 +15,14 @@ module.exports = class {
     };
 
     #_account = {
-        amount : 0
+        amount : 0,
+        availableMargin : 0
     };
 
     #_first_init_flags = {
         amount : false,
         last_price : false,
+        available_margin : false,
     };
 
     #_first_init = false;
@@ -30,6 +33,8 @@ module.exports = class {
             short : [],
         }
     };
+
+    #_trades = [];
 
     #_orders_storage = {};
 
@@ -53,28 +58,49 @@ module.exports = class {
     //Обработка сообщений
     newMessage(message)
     {
+        if (this.#_is_destoyed)
+        {
+            return false;
+        }
+
         if (typeof message.table != 'undefined' && typeof message.data == 'object')
         {
+            let need_print = true;
+
             //Баланс аккаунта
             if (message.table == 'margin' && typeof message.data[0].amount != 'undefined')
             {
                 let old = this.#_account.amount;
                 this.#_account.amount = message.data[0].amount;
                 this.#onAmmountUpdated(this.#_account.amount, old);
+
+                need_print = false;
+            }
+            if (message.table == 'margin' && typeof message.data[0].availableMargin != 'undefined')
+            {
+                let old = this.#_account.available_margin;
+                this.#_account.available_margin = message.data[0].availableMargin;
+                this.#onAvailableMarginUpdated(this.#_account.available_margin, old);
+
+                need_print = false;
             }
 
             //Цена XBT
-            else if (message.table == 'trade' && typeof message.data[0].price != 'undefined')
+            if (message.table == 'trade' && typeof message.data[0].price != 'undefined')
             {
                 let old = this.#_instrument.price;
                 this.#_instrument.price = message.data[0].price;
                 this.#onPriceUpdated(this.#_instrument.price, old);
+
+                need_print = false;
             }
 
-            else
+            if (need_print)
             {
-                console.log(message)
+                //console.log(message)
             }
+
+            console.log(message)
         }
         else
         {
@@ -101,7 +127,7 @@ module.exports = class {
             {
                 this.#_first_init = true;
 
-                console.log('Бот #${this.#_id} получил первичные данные от биржи и БД и начинает работу');
+                console.log(`Бот #${this.#_id} получил первичные данные от биржи и БД и начинает работу`);
 
                 //Считаем маржинальные уровни по актуальной сессии
 
@@ -130,9 +156,18 @@ module.exports = class {
 
     #onAmmountUpdated = function(value, old)
     {
-        console.log('Account amount: '+this.getAccountBalance()+' XBT');
+        console.log('Account amount: '+this.#_account.amount+' ');
 
         this.#_first_init_flags.amount = true;
+        this.#firstInit();
+
+    }
+
+    #onAvailableMarginUpdated = function(value, old)
+    {
+        console.log('Account available margin amount: '+this.#_account.available_margin+' ');
+
+        this.#_first_init_flags.available_margin = true;
         this.#firstInit();
 
     }
@@ -152,18 +187,13 @@ module.exports = class {
         {
             this.#_session.margin_levels.short.forEach((v, i) =>
             {
-
-                /*
-                if (v[1] === null || v[1].status == 'executed')
+                if (value >= v[1] - this.#_parent.options().price_reserve_value)
                 {
-                    if (value >= v[2] - this.#_parent.options().price_reserve_value)
+                    if (this.getTradeById('main_ML_short_'+v[0]) === undefined)
                     {
-                        console.log(`Создаем объект short сделки для плеча ${v[0]}`);
-
-                        this.#_session.margin_levels.short[i][1] = new botTradeControllerModel(this, 'short', v[2], this.#_parent.options().session_start_price, 100, 'main_');
+                        this.createTrade('main_ML_short_'+v[0], 'short', (v[1] - this.#_parent.options().price_modifier), (this.#_parent.options().session_start_price + this.#_parent.options().price_modifier), 100);
                     }
                 }
-                */
             });
         }
     }
@@ -176,10 +206,70 @@ module.exports = class {
         return this.#_account.amount / 100000000;
     }
 
+    getTradeById(id)
+    {
+        return this.#_trades.find((i) => {
+            if (i.options().id == id)
+            {
+                return true;
+            }
+        });
+    }
+
+    //Функция создания трейда. На исполнение ставится в очередь
+
+    createTrade(...args)
+    {
+        let id = args[0];
+        if (this.getTradeById(id) === undefined)
+        {
+            let trade = new botTradeControllerModel(this);
+            this.#_trades.push(trade);
+            trade.init(...args);
+            this.#processTradesInitQueue();
+        }
+    }
+
     //Приватные функции
+
+    //Обработки очереди на трейды
+
+    #processTradesInitQueue = () =>
+    {
+        for (let i in this.#_trades)
+        {
+            if (this.#_trades[i].isInitStarted() && this.#_trades[i].isInitFinished() == false)
+            {
+                break;
+            }
+            else if (this.#_trades[i].isInitStarted() == false && this.#_trades[i].isInitFinished() == false)
+            {
+                this.#_trades[i].startInit()
+                .then(() => {
+                    if (this.#_is_destoyed == false)
+                    {
+                        this.#processTradesInitQueue();
+                    }
+                });
+                break;
+            }
+        }
+    }
     
     #roundToHalf = function(value)
     {
         return Math.round(value / 0.5) * 0.5;
+    }
+
+    //остальное
+
+    destroy()
+    {
+        this.#_is_destoyed = true;
+
+        for (let i in this.#_trades)
+        {
+            this.#_trades[i].destroy();
+        }
     }
 };
