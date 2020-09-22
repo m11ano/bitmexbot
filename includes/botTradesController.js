@@ -26,6 +26,7 @@ module.exports = class {
     };
 
     #_first_init = false;
+    #_first_init_ready = false;
 
     #_session = {
         margin_levels : {
@@ -110,46 +111,64 @@ module.exports = class {
     }
 
     //Инициализация когда получены ВСЕ первичные данные
-    #firstInit = function()
+    #firstInit = async function()
     {
-        if (this.#_first_init == false)
+        return new Promise((resolve, reject) =>
         {
-            let all_ready = true;
-            for (let i in this.#_first_init_flags)
+            if (this.#_first_init == false)
             {
-                if (this.#_first_init_flags[i] == false)
+                let all_ready = true;
+                for (let i in this.#_first_init_flags)
                 {
-                    all_ready = false;
+                    if (this.#_first_init_flags[i] == false)
+                    {
+                        all_ready = false;
+                    }
+                }
+
+                if (all_ready)
+                {
+                    this.#_first_init = true;
+
+                    console.log(`Бот #${this.#_parent.options().id} получил первичные данные от биржи и БД и начинает работу`);
+
+                    //Считаем маржинальные уровни по актуальной сессии
+
+                    this.#_session.margin_levels.long.push(['x100', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.0048)]);
+                    this.#_session.margin_levels.long.push(['x50', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.01455)]);
+                    this.#_session.margin_levels.long.push(['x25', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.0337)]);
+                    this.#_session.margin_levels.long.push(['x10', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.08592)]);
+                    this.#_session.margin_levels.long.push(['x5', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.16282)]);
+                    this.#_session.margin_levels.long.push(['x3', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.246985)]);
+                    this.#_session.margin_levels.long.push(['x2', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.3311)]);
+
+                    this.#_session.margin_levels.short.push(['x100', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.005)]);
+                    this.#_session.margin_levels.short.push(['x50', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.0152)]);
+                    this.#_session.margin_levels.short.push(['x25', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.036265)]);
+                    this.#_session.margin_levels.short.push(['x10', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.10497)]);
+                    this.#_session.margin_levels.short.push(['x5', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.242235)]);
+                    this.#_session.margin_levels.short.push(['x3', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.488095)]);
+                    this.#_session.margin_levels.short.push(['x2', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.98)]);
+
+                    console.log(this.#_session.margin_levels);
+
+                    //Загружаем существующие трейды из БД
+
+                    
+
+                    this.#_first_init_ready = true;
+                    resolve();
+                }
+                else
+                {
+                    resolve();
                 }
             }
-
-            if (all_ready)
+            else
             {
-                this.#_first_init = true;
-
-                console.log(`Бот #${this.#_parent.options().id} получил первичные данные от биржи и БД и начинает работу`);
-
-                //Считаем маржинальные уровни по актуальной сессии
-
-                this.#_session.margin_levels.long.push(['x100', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.0048)]);
-                this.#_session.margin_levels.long.push(['x50', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.01455)]);
-                this.#_session.margin_levels.long.push(['x25', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.0337)]);
-                this.#_session.margin_levels.long.push(['x10', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.08592)]);
-                this.#_session.margin_levels.long.push(['x5', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.16282)]);
-                this.#_session.margin_levels.long.push(['x3', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.246985)]);
-                this.#_session.margin_levels.long.push(['x2', this.#_parent.options().session_start_price - this.#roundToHalf(this.#_parent.options().session_start_price * 0.3311)]);
-
-                this.#_session.margin_levels.short.push(['x100', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.005)]);
-                this.#_session.margin_levels.short.push(['x50', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.0152)]);
-                this.#_session.margin_levels.short.push(['x25', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.036265)]);
-                this.#_session.margin_levels.short.push(['x10', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.10497)]);
-                this.#_session.margin_levels.short.push(['x5', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.242235)]);
-                this.#_session.margin_levels.short.push(['x3', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.488095)]);
-                this.#_session.margin_levels.short.push(['x2', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.98)]);
-
-                //console.log(this.#_session.margin_levels);
+                resolve();
             }
-        }
+        });
     }
 
     //События
@@ -172,38 +191,47 @@ module.exports = class {
 
     }
 
-    #onPriceUpdated = function(value, old)
+    #onPriceUpdated = async function(value, old)
     {
         console.log('XBT last price: '+value);
 
         this.#_first_init_flags.last_price = true;
-        this.#firstInit();
+        await this.#firstInit();
 
-        //Закладываем логику работы основной части бота
-
-        //Если цена больше контрольной точки, создаем объекты шортовых сделок, если они не созданы. Наоборот с лонгами
-
-        if (value > this.#_parent.options().session_start_price)
+        if (this.#_first_init_ready)
         {
-            this.#_session.margin_levels.short.forEach((v, i) =>
+            //Закладываем логику работы основной части бота
+
+            //Если цена больше контрольной точки, создаем объекты шортовых сделок, если они не созданы. Наоборот с лонгами
+
+            if (value > this.#_parent.options().session_start_price)
             {
-                if (value >= v[1] - this.#_parent.options().price_reserve_value)
+                this.#_session.margin_levels.short.forEach((v, i) =>
                 {
-                    if (this.getTradeById('main_ML_short_'+v[0]) === undefined)
+                    if (value >= v[1] - this.#_parent.options().price_reserve_value)
                     {
-                        let volume = this.mainCountTradeVolume(v[0], (v[1] - this.#_parent.options().price_modifier));
-                        if (volume > 0)
+                        if (this.getTradeById('main_ML_short_'+v[0]) === undefined)
                         {
-                            this.createTrade('main_ML_short_'+v[0], 'short', (v[1] - this.#_parent.options().price_modifier), (this.#_parent.options().session_start_price + this.#_parent.options().price_modifier), volume);
+                            let volume = this.mainCountTradeVolume(v[0], (v[1] - this.#_parent.options().price_modifier));
+                            if (volume > 0)
+                            {
+                                this.createTrade('main_ML_short_'+v[0], 'short', (v[1] - this.#_parent.options().price_modifier), (this.#_parent.options().session_start_price + this.#_parent.options().price_modifier), volume);
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
         }
+        
     }
 
 
     //Функции
+
+    parent()
+    {
+        return this.#_parent;
+    }
 
     getAccountBalance()
     {
@@ -227,7 +255,9 @@ module.exports = class {
         let id = args[0];
         if (this.getTradeById(id) === undefined)
         {
-            let trade = new botTradeControllerModel(this);
+            let trade = new botTradeControllerModel(this, (trade) => {
+                this.#deleteTrade(trade.options().id);
+            });
             this.#_trades.push(trade);
             trade.init(...args);
             this.#processTradesInitQueue();
@@ -269,8 +299,28 @@ module.exports = class {
                     {
                         this.#processTradesInitQueue();
                     }
+                })
+                .catch((e) =>
+                {
+                    if (this.#_is_destoyed == false)
+                    {
+                        this.#_trades[i].destroy();
+                        this.#processTradesInitQueue();
+                    }
                 });
+
                 break;
+            }
+        }
+    }
+
+    #deleteTrade = function(id)
+    {
+        for (let i in this.#_trades)
+        {
+            if (this.#_trades[i].options().id == id)
+            {
+                this.#_trades.splice(i, 1);
             }
         }
     }

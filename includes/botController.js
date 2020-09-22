@@ -44,6 +44,13 @@ module.exports = class {
                             symbol: 'XBTUSD'
                         })
                         .then((result) => {
+
+                            global.db.mysql().query(`DELETE from bots_trades WHERE bot_id = ? AND session_id < ?`,
+                            [
+                                this.#_options.id,
+                                this.#_options.session_id
+                            ]);
+
                             global.db.mysql().query(`UPDATE bots_profiles set session_init = 1 WHERE id = ?`, [this.#_id], (error, results, fields) => {
                                 if (!error)
                                 {
