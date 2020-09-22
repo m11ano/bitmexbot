@@ -12,7 +12,7 @@ module.exports = class {
     status = 'new';
     #_options = null;
 
-    constructor(parent, type, enter_price, target_price, volume, prefix)
+    constructor(parent)
     {
         this.#_parent = parent;
 
@@ -73,6 +73,8 @@ module.exports = class {
                 this.#_is_init_started = true;
 
 
+
+                /*
                 setTimeout(()=> {
                     this.#_is_init_finished = true;
 
@@ -83,6 +85,7 @@ module.exports = class {
 
                     resolve();
                 }, 3000);
+                */
 
             }
         });

@@ -127,7 +127,7 @@ module.exports = class {
             {
                 this.#_first_init = true;
 
-                console.log(`Бот #${this.#_id} получил первичные данные от биржи и БД и начинает работу`);
+                console.log(`Бот #${this.#_parent.options().id} получил первичные данные от биржи и БД и начинает работу`);
 
                 //Считаем маржинальные уровни по актуальной сессии
 
@@ -147,7 +147,7 @@ module.exports = class {
                 this.#_session.margin_levels.short.push(['x3', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.488095)]);
                 this.#_session.margin_levels.short.push(['x2', this.#_parent.options().session_start_price + this.#roundToHalf(this.#_parent.options().session_start_price * 0.98)]);
 
-                console.log(this.#_session.margin_levels);
+                //console.log(this.#_session.margin_levels);
             }
         }
     }
@@ -191,7 +191,11 @@ module.exports = class {
                 {
                     if (this.getTradeById('main_ML_short_'+v[0]) === undefined)
                     {
-                        this.createTrade('main_ML_short_'+v[0], 'short', (v[1] - this.#_parent.options().price_modifier), (this.#_parent.options().session_start_price + this.#_parent.options().price_modifier), 100);
+                        let volume = this.mainCountTradeVolume(v[0], (v[1] - this.#_parent.options().price_modifier));
+                        if (volume > 0)
+                        {
+                            this.createTrade('main_ML_short_'+v[0], 'short', (v[1] - this.#_parent.options().price_modifier), (this.#_parent.options().session_start_price + this.#_parent.options().price_modifier), volume);
+                        }
                     }
                 }
             });
@@ -228,6 +232,21 @@ module.exports = class {
             trade.init(...args);
             this.#processTradesInitQueue();
         }
+    }
+
+    mainCountTradeVolume(level, price)
+    {
+        let maxBalance = this.#_parent.options().max_amount * 100000000;
+        let usingBalance = (this.#_account.amount > maxBalance ? maxBalance : this.#_account.amount) / 100000000;
+        if (usingBalance > this.#_account.available_margin / 100000000)
+        {
+            usingBalance = this.#_account.available_margin / 100000000;
+        }
+
+        let volume = usingBalance * this.#_parent.options()['main_pos_cof_'+level];
+        let count = Math.round(volume * price);
+
+        return count;
     }
 
     //Приватные функции
