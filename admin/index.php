@@ -22,7 +22,7 @@ $q = $db->selectById(array(
 
 $profile = $db->num_rows > 0 ? $db->fetch_assoc($q) : false;
 
-if ($profile === false || md5($input_secret) !== $profile['secret_seed'])
+if ($profile === false || $input_secret !== $profile['secret_seed'])
 {
     exit('Access dinied');
 }
