@@ -78,7 +78,7 @@ module.exports = class {
 
                     if (this.#_is_destoyed == false)
                     {
-                        console.log(this.#_options, 'ЗАЕБИСЬ');
+                        console.log(this.#_options);
                     }
 
                     resolve();
