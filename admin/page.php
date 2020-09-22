@@ -62,7 +62,7 @@
                 </div>
             </div>
             <div>
-                <div class="title">Минимальная расстояние в $ от средней цены для открытия сделки</div>
+                <div class="title">Минимальная расстояние в $ от необходимой цены для установки ордера на вход</div>
                 <div class="value">
                     <input type="text" name="price_reserve_value" value="<?php echo $profile['price_reserve_value']; ?>" autocomplete="off">
                 </div>

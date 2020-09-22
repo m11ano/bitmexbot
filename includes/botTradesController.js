@@ -154,7 +154,7 @@ module.exports = class {
 
                     //Загружаем существующие трейды из БД
 
-                    
+
 
                     this.#_first_init_ready = true;
                     resolve();
@@ -216,6 +216,23 @@ module.exports = class {
                             if (volume > 0)
                             {
                                 this.createTrade('main_ML_short_'+v[0], 'short', (v[1] - this.#_parent.options().price_modifier), (this.#_parent.options().session_start_price + this.#_parent.options().price_modifier), volume);
+                            }
+                        }
+                    }
+                });
+            }
+            else if (value < this.#_parent.options().session_start_price)
+            {
+                this.#_session.margin_levels.long.forEach((v, i) =>
+                {
+                    if (value <= v[1] + this.#_parent.options().price_reserve_value)
+                    {
+                        if (this.getTradeById('main_ML_long_'+v[0]) === undefined)
+                        {
+                            let volume = this.mainCountTradeVolume(v[0], (v[1] + this.#_parent.options().price_modifier));
+                            if (volume > 0)
+                            {
+                                this.createTrade('main_ML_long_'+v[0], 'long', (v[1] + this.#_parent.options().price_modifier), (this.#_parent.options().session_start_price - this.#_parent.options().price_modifier), volume);
                             }
                         }
                     }
